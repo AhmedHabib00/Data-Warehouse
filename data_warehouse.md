@@ -206,6 +206,7 @@ A page structure looks like the following:
 
 ![alt text](image-3.png)
 
+
 Big Data requires faster storage rate and speed. However, requests are always faster than storage rate and speed. To overcome this, we need to scale our system to match the demand. 
 
 So, how can we scale this?
@@ -243,26 +244,113 @@ When considering scaling options for data storage and processing, there are two 
 
 ### Key Challenges:
 - **Scalability**: RDBMS are designed for vertical scaling.
-- **Concurrency**: Due to the ACID nature of the RDBMS, concurrency is a challenge with high velocity data.
+- **Concurrency**: Due to the ACID - Isolation nature of the RDBMS, concurrency is a challenge with high velocity data.
 - **I/O Limitations**: Data retrieval is always limited due to its reliance on disk I/O operations.
 
 So, it seems like the sclaing out is the logical direction we should head towards. 
+But can't Postgres scale out? Actually, it can through **partiotioning**.
+
+![alt text](image-7.png)
+
+However, it will still have the same three issues mentioned above due to the ACID - Atomicity nature, as well as sequential reads from the master node.
+
 Here, Hadoop comes into play. 
+
 
 ## Hadoop Distributed Filesystem (HDFS)
 
 Since its original incarnation, Hadoop has evolved beyond batch processing. Indeed the term Hadoop is sometimes used to refer to a larger ecosystem, not just HDFS and MapReduce.
 
 
+## Map Reduce
+
+To speed up the processing, we need to run parts of the program in parallel. In theory, this is straightforward: we could process different years in different processes, using all the available hardware threads on a machine. There are a few problems with this, however.
+
+- First, dividing the work into equal-size pieces isn’t always easy or obvious. In this case, the file size for different years varies widely, so some processes will finish much earlier than others. Even if they pick up further work, the whole run is dominated by the longest file. A better approach, although one that requires more work, is to split the input into fixed-size chunks and assign each chunk to a process.
+
+- Second, combining the results from independent processes may require further processing. In this case, the result for each year is independent of other years, and they may be combined by concatenating all the results and sorting by year. For this example, data for a particular year will typically be split into several chunks, each processed independently. We’ll end up with the maximum temperature for each chunk, so the final step is to look for the highest of these maximums for each year.
+
+- Third, you are still limited by the processing capacity of a single
+machine. If the best time you can achieve is 20 minutes with the number of processors you have, then that’s it. You can’t make it go faster. Also, some datasets grow beyond the capacity of a single machine. When we start using multiple machines, a whole host of other factors come into play, mainly falling into the categories of coordination and reliability. Who runs the overall job? How do we deal with failed processes?
+
+Here, We introduce MapReduce. A **programming model** that comes plugged with all functionalities needed for this specific kind of jobs. 
+
+![alt text](image-8.png)
+
+
+## Example: Item Purchases with MapReduce
+
+### Input Data
+```
+1, 101, Electronics, 2, 300
+2, 102, Clothing, 1, 50
+1, 103, Electronics, 1, 200
+3, 104, Groceries, 5, 20
+2, 105, Clothing, 2, 75
+3, 106, Groceries, 3, 15
+```
+
+### Map Phase
+In the map phase, we will process each record to emit key-value pairs where the key is the `Category` and the value is the `Quantity`.
+
+#### Map Output
+```
+Electronics, 2
+Clothing, 1
+Electronics, 1
+Groceries, 5
+Clothing, 2
+Groceries, 3
+```
+
+### Shuffle and Sort Phase
+In this phase, the MapReduce framework will group the values by key and sort them.
+
+#### Shuffle and Sort Output
+```
+Clothing: [1, 2]
+Electronics: [2, 1]
+Groceries: [5, 3]
+```
+
+### Reduce Phase
+In the reduce phase, we will sum the quantities for each category.
+
+#### Reduce Output
+```
+Clothing, 3
+Electronics, 3
+Groceries, 8
+```
+
+### Final Output
+The final output represents the total quantity of items purchased in each category.
+
+```
+Category, TotalQuantity
+Clothing, 3
+Electronics, 3
+Groceries, 8
+```
+
+This is a very simple example using a single reducer. However, we have the flexibility to scale the number of map jobs as well as the reducer jobs. 
+![alt text](image-9.png)
+
+### Challenges of MapReduce
+- **No SQL Support**
+- **Batch Processing**
+
 
 ![alt text](image-6.png)
 
 
+
+
+
+
 # Scalability on single level
-    -> explain file system
     -> go to distributed file system from here
     -> Hadoop 
-    -> MapReduce
     -> YARN
 
 
