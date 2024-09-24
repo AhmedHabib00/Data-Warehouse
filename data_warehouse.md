@@ -451,6 +451,57 @@ HBase addresses the limitations of batch processing in MapReduce by enabling rea
 
 3. **Scalability**: HBase can scale horizontally by adding more Region Servers. This allows it to handle large datasets and high throughput.
 
+So, HBase solves the issue of providing us with an OLTP for our data warehouse, but it's NoSQL. How can we have a SQL database for OLTP in our datawarehouse? A simple workaround is having processing pipeline that parses the output of the HBase queries, but this can not scale well.
+
+
+## Spark
+Apache spark can be considered an alternative to MapReduce in this ecosystem, by providing a more efficient data processing engine that can handle batch processing, real-time streaming, machine learning, and interactive queries - All within the Hadoop ecosystem.
+Spark is originally a processing engine, it was then adopted into the hadoop ecosystem since it overcomes the challenges discussed in the MapReduce section. 
+As well as providing high-level APIs for Java, Python, and R. It was then expanded, adding multiple layers to it such as: 
+
+### Spark Architecture
+![alt text]({2EB1C409-F761-48B2-BA55-4F6777AA3EDA}.png)
+### Components of Spark - Standalone
+
+1. **Driver Program**: The driver program runs the main function of the application and creates the SparkContext. It is responsible for converting the user program into tasks and scheduling them to run on the executor nodes.
+In Hadoop, it connects to the Cluster Manager in YARN, to negotiate resources.
+
+2. **Executors**: Executors are launched on worker nodes and are responsible for running the tasks assigned by the driver program. They also provide in-memory storage for RDDs that are cached by user programs.
+
+3. **Tasks**: A task is a unit of work that is sent to one executor. Each task operates on a partition of the data.
+
+### Workflow of a Spark Job
+![alt text](image-16.png)
+1. **Job Submission**: The user submits a Spark application using the `spark-submit` command. The application code contains the logic for data processing.
+
+2. **SparkContext Creation**: The driver program initializes a SparkContext, which is the entry point for Spark functionality. The SparkContext connects to the cluster manager.
+
+3. **Resource Allocation**: The cluster manager allocates resources (CPU, memory) for the Spark application. It launches executors on the worker nodes.
+
+4. **Task Scheduling**: The driver program creates a logical plan for the job, which is then converted into a physical plan with stages and tasks. The tasks are scheduled to run on the executors.
+
+5. **Data Processing**: The executors execute the tasks on the data partitions. Intermediate results can be stored in memory for fast access.
+
+6. **Result Collection**: The results of the tasks are sent back to the driver program. The driver program combines the results and performs any final operations.
+
+### Spark in the Hadoop Ecosystem
+
+Spark integrates seamlessly with other components of the Hadoop ecosystem:
+
+- **HDFS**: Spark can read from and write to HDFS, allowing it to process large datasets stored in HDFS.
+- **YARN**: Spark can run on YARN, leveraging YARN's resource management capabilities.
+- **Hive**: Spark can run Hive queries using the HiveContext, allowing it to interact with Hive's metastore and query data stored in Hive tables.
+- **HBase**: Spark can read from and write to HBase, enabling real-time data processing on HBase tables.
+- **Kafka**: Spark can consume data from Kafka topics, allowing it to process streaming data in real-time.
+
+By integrating with these components, Spark provides a powerful and flexible platform for big data processing and analytics.
+
+
+## Hadoop Eco System Overview:
+![alt text](image-14.png)
+
+## Hadoop Ecosystem in Action:
+![alt text](image-15.png)
 
 # Data Warehouse Solutions
 
