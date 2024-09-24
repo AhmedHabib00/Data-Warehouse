@@ -34,7 +34,7 @@ Where does a data warehouse fit in this?
 
 ## Single-Tier Architecture
 
-![alt text](image-1.png)
+![alt text](./.images/image-1.png)
 
 This is a the simplest architecture for a data warehouse system. Known as <b>Single-Tier Data Warehouse</b> Key challenges with this architecture are:
 - Performance Issues (Seven - DB crashes)
@@ -48,7 +48,7 @@ this is considered an OLTP + OLAP simple integration. Not a data warehouse in th
 
 ## Two-Tier Architecture
 
-![alt text]({053308A2-746F-4CF5-A8AF-72730EB8D384}.png)
+![alt text](./.images/{053308A2-746F-4CF5-A8AF-72730EB8D384}.png)
 
 Adding an intermediate layer between data sources and data warehouse, storing the raw data, even unstructured or semi-structured. This gives us more flexibility with analyzing the data, as well as keeping track of the historical raw data.
 
@@ -56,7 +56,7 @@ Adding an intermediate layer between data sources and data warehouse, storing th
 
 ## Three-Tier Architecture
 
-![alt text]({AF13A1FD-3A7E-4C8B-9A2C-A3C096434B54}.png)
+![alt text](./.images/{AF13A1FD-3A7E-4C8B-9A2C-A3C096434B54}.png)
 
 The most-used data warehouse architecture for larger enterprises with large amounts of data from various sources. 
 However, it has the obvious drawbacks of being complex and costly as well as being the most demaing from a technical perspective. 
@@ -105,7 +105,7 @@ The way these tables are organized in the data warehouse define how our schema w
 ## Schema Design
 
 ### Star Schema
-![alt text](image-2.png)
+![alt text](./.images/image-2.png)
 
 Star schema is the simplest form with a central fact table connected to multiple dimension tables.
 It's easy to understand and query. 
@@ -113,7 +113,7 @@ However, in the star schema, the dimension table is not normalized. Since it's f
 
 ### Snowflake Schema
 
-![alt text](main.jpg)
+![alt text](./.images/main.jpg)
 An extension of the star schema with normalized dimension tables.
 reduces data redundancy but can be more complex, and leads to more complex joins (just like any normalization)
 
@@ -204,7 +204,7 @@ A page structure looks like the following:
 &nbsp;
 &nbsp;
 
-![alt text](image-3.png)
+![alt text](./.images/image-3.png)
 
 
 Big Data requires faster storage rate and speed. However, requests are always faster than storage rate and speed. To overcome this, we need to scale our system to match the demand. 
@@ -240,7 +240,7 @@ When considering scaling options for data storage and processing, there are two 
     - **Consistency**: Ensuring data consistency across multiple servers can be challenging.
     - **Fault Tolerance**: Failure is proportional to the number of instances.
 
-![alt text](image-5.png)
+![alt text](./.images/image-5.png)
 
 ### Key Challenges:
 - **Scalability**: RDBMS are designed for vertical scaling.
@@ -250,7 +250,7 @@ When considering scaling options for data storage and processing, there are two 
 So, it seems like the sclaing out is the logical direction we should head towards. 
 But can't Postgres scale out? Actually, it can through **partiotioning**.
 
-![alt text](image-7.png)
+![alt text](./.images/image-7.png)
 
 However, it will still have the same three issues mentioned above due to the ACID - Atomicity nature, as well as sequential reads from the master node.
 
@@ -267,7 +267,7 @@ HDFS is designed for storing very large files with streaming data access (Write 
 
 HDFS has a master/slave architecture. An HDFS cluster consists of a single NameNode, a master server that manages the file system namespace and regulates access to files by clients. In addition, there are a number of DataNodes, usually one per node in the cluster, which manage storage attached to the nodes that they run on.
 
-![alt text]({138DFF28-DF52-4D3C-97BD-9717AB893D92}.png)
+![alt text](./.images/{138DFF28-DF52-4D3C-97BD-9717AB893D92}.png)
 
 ### HDFS Concepts
 - **Blocks**:
@@ -297,7 +297,7 @@ machine. If the best time you can achieve is 20 minutes with the number of proce
 
 Here, We introduce MapReduce. A **programming model** that comes plugged with all functionalities needed for this specific kind of jobs. 
 
-![alt text](image-8.png)
+![alt text](./.images/image-8.png)
 
 
 ### Example: Item Purchases with MapReduce
@@ -356,21 +356,21 @@ Groceries, 8
 ```
 
 This is a very simple example using a single reducer. However, we have the flexibility to scale the number of map jobs as well as the reducer jobs. 
-![alt text](image-9.png)
+![alt text](./.images/image-9.png)
 
 ### Challenges of MapReduce
 - **No SQL Support**
 - **Batch Processing**
 
 
-![alt text](image-6.png)
+![alt text](./.images/image-6.png)
 
 
 ## YARN
 just like we did with Postgres, going into details of how the data is actually read, we need to look into how the data is read from the HDFS by MapReduce. 
 
 The MapReduce we discussed is the v2. of the MapReduce. Before 2012, with the HDFS v1. MapReduce had APIs for interacting directly with the filesystem to read the data. However, since the release of version 2 of HDFS, Hadoop introduce YARN (Yet Another Resource Negotiator), as a separating layer between any application in the Hadoop ecosystem and the actual HDFS. 
-![alt text](image-10.png)
+![alt text](./.images/image-10.png)
 
 YARN acts as the cluster resource manager. It provides APIs for requesting and working with cluster resources, but these APIs are not exposed directly to the user code, but rather as part of the distributed computing framework (MapReduce, Spark, Hive, etc.)
 
@@ -386,7 +386,7 @@ The fundamental idea of YARN is to split up the functionalities of resource mana
 After, we write our code/query, we submit it to the cluster. YARN picks up the query, invokes the **Resource Manager** which checks the available nodes to pick up the job and execute it. How does it check it? Through **Node Managers** where a request-response cycle occurs for checking for data locality & available resources.
 
 
-![alt text](image-11.png)
+![alt text](./.images/image-11.png)
 
 
 ** Further readings: Scheduling types & modes. 
@@ -395,7 +395,7 @@ After, we write our code/query, we submit it to the cluster. YARN picks up the q
 ## HBase
 As we discussed, MapReduce has the drawback of being bash-processing based. What if we need to interact with the data as a transactional one? 
 
-![alt text](image-12.png)
+![alt text](./.images/image-12.png)
 
 ### What is HBase?
 
@@ -460,7 +460,7 @@ Spark is originally a processing engine, it was then adopted into the hadoop eco
 As well as providing high-level APIs for Java, Python, and R. It was then expanded, adding multiple layers to it such as: 
 
 ### Spark Architecture
-![alt text]({2EB1C409-F761-48B2-BA55-4F6777AA3EDA}.png)
+![alt text](./.images/{2EB1C409-F761-48B2-BA55-4F6777AA3EDA}.png)
 ### Components of Spark - Standalone
 
 1. **Driver Program**: The driver program runs the main function of the application and creates the SparkContext. It is responsible for converting the user program into tasks and scheduling them to run on the executor nodes.
@@ -471,7 +471,7 @@ In Hadoop, it connects to the Cluster Manager in YARN, to negotiate resources.
 3. **Tasks**: A task is a unit of work that is sent to one executor. Each task operates on a partition of the data.
 
 ### Workflow of a Spark Job
-![alt text](image-16.png)
+![alt text](./.images/image-16.png)
 1. **Job Submission**: The user submits a Spark application using the `spark-submit` command. The application code contains the logic for data processing.
 
 2. **SparkContext Creation**: The driver program initializes a SparkContext, which is the entry point for Spark functionality. The SparkContext connects to the cluster manager (such as YARN, Kubernetes, or standalone master node). It communicates for assigning worker nodes. A special resource for Spark is called RDD for in-memory data storage for faster processing.
@@ -498,10 +498,10 @@ By integrating with these components, Spark provides a powerful and flexible pla
 
 
 ## Hadoop Eco System Overview:
-![alt text](image-14.png)
+![alt text](./.images/image-14.png)
 
 ## Hadoop Ecosystem in Action:
-![alt text](image-15.png)
+![alt text](./.images/image-15.png)
 
 # Data Warehouse Solutions
 
@@ -515,7 +515,7 @@ As mentioned in MapReduce, there's no sql support. It's a programming model, mea
 Hive provides us the querying functionality using a sql-like language called HiveQL
 
 ### Hive Architecture
-![alt text](0_WL3GeoRWtDvNAL16.png)
+![alt text](./.images/0_WL3GeoRWtDvNAL16.png)
 
 1. **Hive Client**:
     - **Role**: Provides an interface for users to interact with Hive. This can be through a command-line interface (CLI), web-based user interface (UI), or JDBC/ODBC drivers for connecting with other applications.
@@ -578,7 +578,7 @@ This storage format allows for efficient querying of specific columns. For examp
 ## 3) AWS Redshift
 Redshift is a cloud-provided data warehouse solution provided by Amazon. It's a three-tier architecture, utilizing underlying AWS services for all the functionalities needed 
 
-![alt text](image-13.png)
+![alt text](./.images/image-13.png)
 
 Redshift is based on a modified version of Postgres, that has all the partitioning, scalability handled completely by AWS. 
 It ends up with a similar view to the HDFS complete ecosystem, with each component we discussed having an alternative in the AWS services. Like:
@@ -602,7 +602,7 @@ Hadoop has 3 types of installation modes:
 The fully distributed is the production setup, whereas pseudo-distributed is good for development and testing.
 
 ### Fully Distributed Setup
-![alt text](image-17.png)
+![alt text](./.images/image-17.png)
 
 Both Pseudo-distributed and standalone installation have all system components on a single node. However, the way 
 We setup this single node is the real distinction between both.
@@ -611,11 +611,11 @@ HDFS, and all its ecosystem components were written in Java, meaning that each n
 
 ### Standalone:
 Uses a single JVM for all system components in the node.
-![alt text](image-18.png)
+![alt text](./.images/image-18.png)
 
 ### Pseudo-Distributed:
 Each System component has its own JVM.
-![alt text](image-19.png)
+![alt text](./.images/image-19.png)
 
 Naturally, since we're working on a single laptop, we'll have a demo for the pseudo-distributed installation uning Docker, where each component has its own JVM installed on its own Docker Image.
 
