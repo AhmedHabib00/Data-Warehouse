@@ -259,7 +259,29 @@ Here, Hadoop comes into play.
 
 ## Hadoop Distributed Filesystem (HDFS)
 
-Since its original incarnation, Hadoop has evolved beyond batch processing. Indeed the term Hadoop is sometimes used to refer to a larger ecosystem, not just HDFS and MapReduce.
+Since its original release, Hadoop has evolved beyond batch processing. Indeed the term Hadoop is sometimes used to refer to a larger ecosystem, not just HDFS.
+
+### HDFS Design
+
+HDFS is designed for storing very large files with streaming data access (Write once, Read Multiple times) patterns running on clusters of commodity hardware. 
+
+HDFS has a master/slave architecture. An HDFS cluster consists of a single NameNode, a master server that manages the file system namespace and regulates access to files by clients. In addition, there are a number of DataNodes, usually one per node in the cluster, which manage storage attached to the nodes that they run on.
+
+![alt text]({138DFF28-DF52-4D3C-97BD-9717AB893D92}.png)
+
+### HDFS Concepts
+- **Blocks**:
+A block is like the page in Postgres, however, it's by default 128MB, compared to 8KBs of Postgres. 
+Why is it so large? To minimize the cost of seeks. It's optimized to make seek time 1% of transfer time (10ms -> 100MB/s). This makes storage management per blocks and not files, since files can span many disks and nodes.
+
+- **Name Node**:
+It manages the filesystem, maintaining the filesystem tree and metadata. It delegates and routes the requests to the respective data nodes. How does it route? To what data node? It stores what blocks each data node stores. (Edit Log / Namenode Log)
+
+- **Data Node**:
+Worker nodes, that maintain the data, reads and storesfrom the local disks.
+
+
+But, how do we read the data from all these nodes? Why is it better than traditional RDBMS?
 
 
 ## Map Reduce
@@ -278,7 +300,7 @@ Here, We introduce MapReduce. A **programming model** that comes plugged with al
 ![alt text](image-8.png)
 
 
-## Example: Item Purchases with MapReduce
+### Example: Item Purchases with MapReduce
 
 ### Input Data
 ```
@@ -344,14 +366,30 @@ This is a very simple example using a single reducer. However, we have the flexi
 ![alt text](image-6.png)
 
 
+## YARN
+just like we did with Postgres, going into details of how the data is actually read, we need to look into how the data is read from the HDFS by MapReduce. 
+
+The MapReduce we discussed is the v2. of the MapReduce. Before 2012, with the HDFS v1. MapReduce had APIs for interacting directly with the filesystem to read the data. However, since the release of version 2 of HDFS, Hadoop introduce YARN (Yet Another Resource Negotiator), as a separating layer between any application in the Hadoop ecosystem and the actual HDFS. 
+![alt text](image-10.png)
+
+YARN acts as the cluster resource manager. It provides APIs for requesting and working with cluster resources, but these APIs are not exposed directly to the user code, but rather as part of the distributed computing framework (MapReduce, Spark, Hive, etc.)
+
+### Anatomy of YARN Application
+
+The fundamental idea of YARN is to split up the functionalities of resource management and job scheduling/monitoring into separate daemons. The idea is to have a global ResourceManager (RM) and per-application ApplicationMaster (AM). An application is either a single job or a DAG of jobs.
+
+- **Resource Manager**: The master of the cluster. it decides which jobs run on which nodes. 
+
+- **Node Manager**: The master of the node. Responsible for the container running on the node. Monitors their resource usage (cpu, memory, disk, network), reporting to the resource manager/Scheduler.
 
 
+After, we write our code/query, we submit it to the cluster. YARN picks up the query, invokes the **Resource Manager** which checks the available nodes to pick up the job and execute it. How does it check it? Through **Node Managers** where a request-response cycle occurs for checking for data locality & available resources.
 
 
-# Scalability on single level
-    -> go to distributed file system from here
-    -> Hadoop 
-    -> YARN
+![alt text](image-11.png)
+
+
+** Further readings: Scheduling types & modes. 
 
 
 now that we covered all topics, let's see some datawarehouse projects. (Cloud/on-prem)
