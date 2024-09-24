@@ -590,3 +590,32 @@ It ends up with a similar view to the HDFS complete ecosystem, with each compone
 
 
 
+# Demo
+Before diving into the demo, we need to understand Hadoop installation.
+## Hadoop Installation
+
+Hadoop has 3 types of installation modes:
+    • Fully Distributed
+    • Pseudo-Distributed
+    • Standalone
+    
+The fully distributed is the production setup, whereas pseudo-distributed is good for development and testing.
+
+### Fully Distributed Setup
+![alt text](image-17.png)
+
+Both Pseudo-distributed and standalone installation have all system components on a single node. However, the way 
+We setup this single node is the real distinction between both.
+
+HDFS, and all its ecosystem components were written in Java, meaning that each node in the system needs a JVM to run on it. When choosing to put all on a single node, we have two options to configure the JVMs for the nodes:
+
+### Standalone:
+Uses a single JVM for all system components in the node.
+![alt text](image-18.png)
+
+### Pseudo-Distributed:
+Each System component has its own JVM.
+![alt text](image-19.png)
+
+Naturally, since we're working on a single laptop, we'll have a demo for the pseudo-distributed installation uning Docker, where each component has its own JVM installed on its own Docker Image.
+
