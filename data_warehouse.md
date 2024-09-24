@@ -392,10 +392,150 @@ After, we write our code/query, we submit it to the cluster. YARN picks up the q
 ** Further readings: Scheduling types & modes. 
 
 
-now that we covered all topics, let's see some datawarehouse projects. (Cloud/on-prem)
-    -> Hive
-    -> Redshift
-    -> ClickHouse
-    -> Azure synabse
+## HBase
+As we discussed, MapReduce has the drawback of being bash-processing based. What if we need to interact with the data as a transactional one? 
+
+![alt text](image-12.png)
+
+### What is HBase?
+
+HBase is an open-source, distributed, scalable, and NoSQL database modeled after Google's Bigtable. It is designed to handle large amounts of sparse data, providing real-time read/write access to big data. HBase is built on top of the Hadoop Distributed File System (HDFS) and integrates seamlessly with Hadoop's ecosystem.
+
+HBase is used to overcome the limitations of batch processing in MapReduce by providing real-time read/write access to data. useful for real-time read/write operations on large datasets. Allowing us to have an OLTP layer in our ecosystem, one that we can query and interact with for daily operations.
+
+- **Time-series data storage and retrieval**
+- **Real-time analytics**
+- **Online transaction processing (OLTP)**
+- **Storing and managing large-scale data for web applications**
+
+### HBase Architecture
+
+HBase has a master-slave architecture consisting of several key components:
+
+1. **HBase Master**
+2. **Region Servers**
+3. **ZooKeeper**
+4. **HDFS**
+
+#### 1. HBase Master
+
+- The HBase Master is responsible for managing the cluster, including the assignment of regions to Region Servers, load balancing, and handling schema changes.
+- **Functions**:
+    - Coordinates the Region Servers.
+    - Manages metadata and schema operations.
+    - Handles failover and recovery.
+
+#### 2. Region Servers
+
+- Region Servers handle read and write requests from clients. They manage regions, which are subsets of the table's data.
+- **Functions**:
+    - Serve data for read and write operations.
+    - Split regions when they become too large.
+    - Communicate with the HBase Master for region assignment and load balancing.
+
+#### 3. ZooKeeper
+
+- ZooKeeper is a distributed coordination service that manages configuration information, naming, and synchronization for HBase.
+- **Functions**:
+    - Keeps track of the live Region Servers.
+    - Provides distributed synchronization.
+    - Stores metadata about the cluster state.
+
+### How HBase Solves Batch Processing Issues in MapReduce
+
+HBase addresses the limitations of batch processing in MapReduce by enabling real-time read/write access to data. Here’s how it achieves this:
+
+1. **Random Access**: Unlike HDFS, which is optimized for sequential access, HBase allows for random read/write access to data. This makes it suitable for applications that require quick lookups and updates.
+
+2. **Low Latency**: HBase provides low-latency access to data, making it ideal for real-time applications. It achieves this through in-memory caching and efficient data retrieval mechanisms.
+
+3. **Scalability**: HBase can scale horizontally by adding more Region Servers. This allows it to handle large datasets and high throughput.
+
+
+# Data Warehouse Solutions
+
+There are multiple solutions available for data warehouses, spanning from free open-source projects like Hive & ClickHouse, to cloud-provided solutions like AWS Redshift & Azure Synapse.
+
+## 1) Hive
+Apache Hive is another tool in the Hadoop ecosystem built on top of HDFS, YARN, and MapReduce. 
+
+As we discussed, since the Hadoop ecosystem is so distributed, each part of the ecosystem tries to fill a hole left by other parts. 
+As mentioned in MapReduce, there's no sql support. It's a programming model, meaning if we want to query our data in the HDFS, we have to write a script or a complete program to achieve this. 
+Hive provides us the querying functionality using a sql-like language called HiveQL
+
+### Hive Architecture
+![alt text](0_WL3GeoRWtDvNAL16.png)
+
+1. **Hive Client**:
+    - **Role**: Provides an interface for users to interact with Hive. This can be through a command-line interface (CLI), web-based user interface (UI), or JDBC/ODBC drivers for connecting with other applications.
+
+2. **Hive Services**:
+    - **Driver**: Manages the lifecycle of a HiveQL query, including query compilation, optimization, and execution.
+    - **Compiler**: Parses the HiveQL query, checks for syntax and semantic errors, and converts it into a directed acyclic graph (DAG) of map-reduce tasks.
+    - **Execution Engine**: Executes the DAG of tasks in the correct order, interacting with Hadoop's YARN for resource allocation.
+    - **Metastore**: Stores metadata about the tables, columns, data types, and the location of data in HDFS. It is crucial for query planning and optimization. It's usually a traditional RDBMS (Postgres/MySQL)
+
+### Workflow of Query Execution
+
+1. **Query Submission**: The user submits a HiveQL query through the Hive Client.
+2. **Query Parsing**: The Driver receives the query and passes it to the Compiler.
+3. **Query Compilation**: The Compiler parses the query, checks for errors, and converts it into a DAG of map-reduce tasks.
+4. **Optimization**: The Compiler optimizes the DAG for efficient execution.
+5. **Execution Plan**: The optimized DAG is passed to the Execution Engine.
+6. **Resource Allocation**: The Execution Engine interacts with YARN to allocate resources for the tasks.
+7. **Task Execution**: The tasks are executed in the correct order, reading from and writing to HDFS as needed.
+8. **Result Retrieval**: The results are collected and returned to the user through the Hive Client.
+
+So basically, Hive is a layer that lets us interact with HDFS/MapReduce using SQL-like queries. But does it have to be MapReduce? -> Further readings: Apache Tez
+
+Hive is very popular due to its flexibility. As it can be used for all types of Datawarehouse architectures. Providing ultimate flexibility, in addition to many other tools in the Hadoop ecosystem that can handle all kinds of tasks related to data science (Spark/Kafka/...)
+
+## 2) ClickHouse
+Clickhouse is a column-oriented SQL DBMS. for OLAP (remember which tier for the datawarehouse architecture? Single-Tier)
+
+
+### Column-Oriented SQL
+
+Column-oriented databases store data by columns rather than by rows. This approach is particularly beneficial for analytical queries that aggregate data over many rows but only for a subset of columns. By storing each column separately, column-oriented databases can read only the necessary columns, reducing I/O and improving query performance.
+
+#### Example: Item Purchases in Column-Oriented Storage
+
+Consider the same example of item purchases:
+
+| PurchaseID | ItemID | Category    | Quantity | Price |
+|------------|--------|-------------|----------|-------|
+| 1          | 101    | Electronics | 2        | 300   |
+| 2          | 102    | Clothing    | 1        | 50    |
+| 1          | 103    | Electronics | 1        | 200   |
+| 3          | 104    | Groceries   | 5        | 20    |
+| 2          | 105    | Clothing    | 2        | 75    |
+| 3          | 106    | Groceries   | 3        | 15    |
+
+In a column-oriented database, the data would be stored as follows:
+
+- **PurchaseID Column**: [1, 2, 1, 3, 2, 3]
+- **ItemID Column**: [101, 102, 103, 104, 105, 106]
+- **Category Column**: [Electronics, Clothing, Electronics, Groceries, Clothing, Groceries]
+- **Quantity Column**: [2, 1, 1, 5, 2, 3]
+- **Price Column**: [300, 50, 200, 20, 75, 15]
+
+This storage format allows for efficient querying of specific columns. For example, if we want to calculate the total quantity of items purchased in each category, the database can read only the **Category** and **Quantity** columns, ignoring the others.
+
+** Can we apply map reduce here as a programming model? Yes! In fact, there's an Apache column-based DBMS known as ***Apache Cassandra*** which can be easily integrated into our hadoop ecosystem.
+
+
+## 3) AWS Redshift
+Redshift is a cloud-provided data warehouse solution provided by Amazon. It's a three-tier architecture, utilizing underlying AWS services for all the functionalities needed 
+
+![alt text](image-13.png)
+
+Redshift is based on a modified version of Postgres, that has all the partitioning, scalability handled completely by AWS. 
+It ends up with a similar view to the HDFS complete ecosystem, with each component we discussed having an alternative in the AWS services. Like:
+- HDFS - S3
+- YARN - EMR
+- Hive - Athena
+- Pig - Glue
+- HBase - DynamoDB
+
 
 
