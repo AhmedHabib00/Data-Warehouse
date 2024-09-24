@@ -169,6 +169,93 @@ reduces data redundancy but can be more complex, and leads to more complex joins
 | 2          | Los Angeles |
 | 3          | Chicago     |
 
+&nbsp;
+&nbsp;
+&nbsp;
+
+# Filesystems
+
+Now we've covered how the data is stored on a logical level (Schema - Tables). But how is the data actually stored on disk? Here, **File systems** come into play.
+
+## Postgres Physical Storage
+The data files used by a database cluster are stored together within the cluster's data directory, commonly referred to as **PGDATA** 
+
+For each database in the cluster, there is a subdirectory within PGDATA/base, named after the database's OID in pg_database. This subdirectory is the default location for the database's files.
+
+```sql
+SELECT oid, datname FROM pg_database;
+```
+this query lists all databases in our cluster, with their unique identifier. This identifier is then stored in **PGDATA/base/{OID}**
+So now the question is how does Postgres 
+
+actually read the data when a query is executed?
+
+
+Every table stored as an array of pages of a fixed size (usually 8Kb). In a table, all the pages are logically equivalent, so a particular item (row) can be stored in any page.
+
+The structure used to store the table is a heap file. Heap files are lists of unordered records of variable size. The heap file is structured as a collection of pages (or block), each containing a collection of items. The term item refers to a row that is stored on a page.
+
+A page structure looks like the following:
+
+### Terminology:
+- **Tuple**: representation of the row in the database
+- **Page Header**: 24 bytes long containing metadata information about the page
+- **Page**: 8kb segment information 
+&nbsp;
+&nbsp;
+
+![alt text](image-3.png)
+
+Big Data requires faster storage rate and speed. However, requests are always faster than storage rate and speed. To overcome this, we need to scale our system to match the demand. 
+
+So, how can we scale this?
+
+
+### Vertical Scaling vs Horizontal Scaling
+
+When considering scaling options for data storage and processing, there are two primary approaches:
+
+### Vertical Scaling (Scale Up)
+
+- **Definition**: Increasing the capacity of a single server (e.g., adding more CPU, RAM, or storage).
+- **Advantages**:
+    - Simplicity: Easier to implement and manage.
+    - Consistency: Single system, so no need for data distribution.
+- **Disadvantages**:
+    - Limited by hardware constraints.
+    - Potentially higher cost for high-end hardware.
+    - Single point of failure.
+
+
+### Horizontal Scaling (Scale Out)
+
+- **Definition**: Adding more servers to distribute the load.
+- **Advantages**:
+    - **Scalability**: Easier to scale out by adding more servers.
+    - **Redundancy**: Multiple servers reduce the risk of a single point of failure.
+    - **Cost-Effective**: Can use commodity hardware.
+- **Disadvantages**:
+    - **Complexity**: Requires more sophisticated management and data distribution.
+    - **Consistency**: Ensuring data consistency across multiple servers can be challenging.
+    - **Fault Tolerance**: Failure is proportional to the number of instances.
+
+![alt text](image-5.png)
+
+### Key Challenges:
+- **Scalability**: RDBMS are designed for vertical scaling.
+- **Concurrency**: Due to the ACID nature of the RDBMS, concurrency is a challenge with high velocity data.
+- **I/O Limitations**: Data retrieval is always limited due to its reliance on disk I/O operations.
+
+So, it seems like the sclaing out is the logical direction we should head towards. 
+Here, Hadoop comes into play. 
+
+## Hadoop Distributed Filesystem (HDFS)
+
+Since its original incarnation, Hadoop has evolved beyond batch processing. Indeed the term Hadoop is sometimes used to refer to a larger ecosystem, not just HDFS and MapReduce.
+
+
+
+![alt text](image-6.png)
 
 
 # Scalability on single level
@@ -184,3 +271,5 @@ now that we covered all topics, let's see some datawarehouse projects. (Cloud/on
     -> Redshift
     -> ClickHouse
     -> Azure synabse
+
+
