@@ -474,11 +474,11 @@ In Hadoop, it connects to the Cluster Manager in YARN, to negotiate resources.
 ![alt text](image-16.png)
 1. **Job Submission**: The user submits a Spark application using the `spark-submit` command. The application code contains the logic for data processing.
 
-2. **SparkContext Creation**: The driver program initializes a SparkContext, which is the entry point for Spark functionality. The SparkContext connects to the cluster manager.
+2. **SparkContext Creation**: The driver program initializes a SparkContext, which is the entry point for Spark functionality. The SparkContext connects to the cluster manager (such as YARN, Kubernetes, or standalone master node). It communicates for assigning worker nodes. A special resource for Spark is called RDD for in-memory data storage for faster processing.
 
 3. **Resource Allocation**: The cluster manager allocates resources (CPU, memory) for the Spark application. It launches executors on the worker nodes.
 
-4. **Task Scheduling**: The driver program creates a logical plan for the job, which is then converted into a physical plan with stages and tasks. The tasks are scheduled to run on the executors.
+4. **Task Scheduling**: The driver program creates a logical plan for the job, constructing a DAG of stages representing the job stages (like Airflow). The tasks are scheduled to run on the executors based on the cluster manager assignment.
 
 5. **Data Processing**: The executors execute the tasks on the data partitions. Intermediate results can be stored in memory for fast access.
 
