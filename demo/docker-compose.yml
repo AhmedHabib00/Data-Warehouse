@@ -1,0 +1,328 @@
+services:
+  namenode:
+    image: apache/hadoop:3
+    hostname: namenode
+    command: ["hdfs", "namenode"]
+    ports:
+      - 9870:9870
+    env_file:
+      - ./configs/config
+    environment:
+      ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name"
+      HADOOP_HOME: "/opt/hadoop"
+    volumes:
+      - namenodedata:/data
+
+  datanode:
+    image: apache/hadoop:3
+    command: ["hdfs", "datanode"]
+    env_file:
+      - ./configs/config
+    volumes:
+      - datanodedata2:/data
+    depends_on:
+      - namenode
+
+  resourcemanager:
+    image: apache/hadoop:3
+    command: ["yarn", "resourcemanager"]
+    ports:
+      - 8088:8088
+    env_file:
+      - ./configs/config
+
+  nodemanager:
+    image: apache/hadoop:3
+    command: ["yarn", "nodemanager"]
+    ports:
+      - 8042:8042
+    env_file:
+      - ./configs/config
+
+  # This is a temporary container to install the tez library in hdfs
+  tez_installer:
+    image: apache/hive:4.0.0
+    entrypoint: ["bash", "/install_tez.sh"]
+    environment:
+      HADOOP_CONF_DIR: /hive_conf
+    volumes:
+      - ./configs:/hive_conf
+      - ./install_tez.sh:/install_tez.sh
+    depends_on:
+      - datanode
+
+  # HIVE server to more easily query the data from hadoop
+  hive_server:
+    image: apache/hive:4.0.0
+    ports:
+      - 10000:10000
+      - 10002:10002
+    environment:
+      SERVICE_NAME: "hiveserver2"
+      HIVE_CUSTOM_CONF_DIR: "/hive_conf"
+      IS_RESUME: "true"
+    volumes:
+      - ./configs:/hive_conf
+      - hiveserverdata:/opt/hive/data/warehouse
+    depends_on:
+      database:
+        condition: service_healthy
+      hivemetastore:
+        condition: service_started
+
+  # Expose the hive metastore instead of keeping it embedded in hiveserver
+  hivemetastore:
+    image: apache/hive:4.0.0
+    ports:
+      - 9083:9083
+    environment:
+      - SERVICE_NAME=metastore
+      - HIVE_CUSTOM_CONF_DIR=/hive_conf
+      - DB_DRIVER=mysql
+    volumes:
+      - ./configs:/hive_conf
+      - hiveserverdata:/opt/hive/data/warehouse
+      - ./lib/mysql-connector-java-5.1.49.jar:/opt/hive/lib/mysql-connector-java-5.1.49.jar
+    depends_on:
+      database:
+        condition: service_healthy
+
+  # Front-end to be able to query hive more easily
+  hue_server:
+    image: gethue/hue:latest
+    ports:
+      - 8888:8888
+    volumes:
+      - ./configs/hue/hue.ini:/usr/share/hue/desktop/conf/z-hue.ini
+    depends_on:
+      database:
+        condition: service_healthy
+
+  # MYSQL Database to support hue
+  database:
+    image: mysql:5.7
+    ports:
+      - 33061:3306
+    command: --init-file /data/application/init.sql
+    volumes:
+      - mysqldata:/var/lib/mysql
+      - ./configs/mysql/init.sql:/data/application/init.sql
+    environment:
+      MYSQL_ROOT_USER: root
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: hue
+      MYSQL_USER: adm
+      MYSQL_PASSWORD: secret
+    healthcheck:
+      test: mysqladmin ping --user=adm --password=secret
+
+  # Spark client
+  spark:
+    image: bitnami/spark:latest
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_USER=spark
+      - YARN_CONF_DIR=/opt/bitnami/spark/custom_configs
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./configs/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+      - ./configs:/opt/bitnami/spark/custom_configs
+      - .:/opt/bitnami/spark/scripts
+  
+  kafka:
+    image: bitnami/kafka:latest
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    restart: "no"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+      JVM_OPTS: "-Xms16M -Xmx512M -Xss180K -XX:-TieredCompilation -XX:+UseStringDeduplication -noverify"
+    ports:
+      - 9000:9000
+    depends_on:
+      - kafka
+
+  kconnect:
+    image: debezium/connect:1.9
+    ports:
+      - 8083:8083
+    environment:
+      CONFIG_STORAGE_TOPIC: my_connect_configs
+      OFFSET_STORAGE_TOPIC: my_connect_offsets
+      STATUS_STORAGE_TOPIC: my_connect_statuses
+      BOOTSTRAP_SERVERS: kafka:9092
+    links:
+      - zookeeper
+      - oltp-postgres
+    depends_on:
+      - kafka
+      - zookeeper
+      - oltp-postgres  
+
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - kafka
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:9092'
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    ports:
+      - "8081:8081"
+
+  kafka-connect:
+    build: .
+    environment:
+      - CONNECT_BOOTSTRAP_SERVERS=kafka:9092
+      - CONNECT_REST_ADVERTISED_HOST_NAME=kafka-connect
+      - CONNECT_GROUP_ID=compose-connect-group
+      - CONNECT_CONFIG_STORAGE_TOPIC=docker-connect-config
+      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR= 1
+      - CONNECT_OFFSET_FLUSH_INTERVAL_MS= 10000
+      - CONNECT_OFFSET_STORAGE_TOPIC=docker-connect-offsets
+      - CONNECT_STATUS_STORAGE_TOPIC=docker-connect-status
+      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR= 1
+      - CONNECT_STATUS_STORAGE_TOPIC= docker-connect-status
+      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR= 1
+      - CONNECT_KEY_CONVERTER= org.apache.kafka.connect.storage.StringConverter
+      - CONNECT_VALUE_CONVERTER= io.confluent.connect.avro.AvroConverter
+      - CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL= http://schema-registry:8081
+      - CONNECT_PLUGIN_PATH= "/usr/share/java,/usr/share/confluent-hub-components"
+      - CONNECT_LOG4J_LOGGERS= org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
+      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.storage.StringConverter
+      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.storage.StringConverter
+      - CONNECT_REST_PORT=8083
+    ports:
+      - "8083:8083"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+    ports:
+      - "8082:8080"
+
+  ksqldb-server:
+    image: confluentinc/cp-ksqldb-server:6.1.1
+    hostname: ksqldb-server
+    container_name: ksqldb-server
+    depends_on:
+      - kafka
+      - kafka-connect
+    ports:
+      - "8099:8099"
+    environment:
+      KSQL_CONFIG_DIR: "/etc/ksql"
+      KSQL_BOOTSTRAP_SERVERS: "kafka:9092"
+      KSQL_HOST_NAME: ksqldb-server
+      KSQL_LISTENERS: "http://0.0.0.0:8099"
+      KSQL_CACHE_MAX_BYTES_BUFFERING: 0
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      KSQL_PRODUCER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor"
+      KSQL_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"
+      KSQL_KSQL_CONNECT_URL: "http://kafka-connect:8083"
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: 'true'
+      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: 'true'
+
+  ksqldb-cli:
+    image: confluentinc/cp-ksqldb-cli:6.1.1
+    container_name: ksqldb-cli
+    depends_on:
+      - kafka
+      - kafka-connect
+      - ksqldb-server
+    entrypoint: /bin/sh
+    tty: true
+
+
+  ksql-datagen:
+    image: confluentinc/ksqldb-examples:6.1.1
+    hostname: ksql-datagen
+    container_name: ksql-datagen
+    depends_on:
+      - ksqldb-server
+      - kafka
+      - schema-registry
+      - kafka-connect
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                       cub kafka-ready -b kafka:9092 1 40 && \
+                       echo Waiting for Confluent Schema Registry to be ready... && \
+                       cub sr-ready schema-registry 8081 40 && \
+                       echo Waiting a few seconds for topic creation to finish... && \
+                       sleep 11 && \
+                       tail -f /dev/null'"
+    environment:
+      KSQL_CONFIG_DIR: "/etc/ksql"
+      STREAMS_BOOTSTRAP_SERVERS: kafka:9092
+      STREAMS_SCHEMA_REGISTRY_HOST: schema-registry
+      STREAMS_SCHEMA_REGISTRY_PORT: 8081
+
+  rest-proxy:
+    image: confluentinc/cp-kafka-rest:6.1.1
+    depends_on:
+      - kafka
+      - schema-registry
+    ports:
+      - 8087:8082
+    hostname: rest-proxy
+    container_name: rest-proxy
+    environment:
+      KAFKA_REST_HOST_NAME: rest-proxy
+      KAFKA_REST_BOOTSTRAP_SERVERS: 'kafka:9092'
+      KAFKA_REST_LISTENERS: "http://0.0.0.0:8087"
+      KAFKA_REST_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
+
+
+  oltp-postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=habib
+      - POSTGRES_PASSWORD=habib
+      - POSTGRES_DB=habib
+    ports:
+      - "5432:5432"
+
+  oltp-mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+  
+
+volumes:
+  mysqldata:
+  hiveserverdata:
+  namenodedata:
+  datanodedata2:
+
+networks:
+  default:
+    name: hadoop
